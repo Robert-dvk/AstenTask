@@ -1,5 +1,6 @@
 package avmb.desafio.AstenTask.model;
 
+import avmb.desafio.AstenTask.model.project.Project;
 import avmb.desafio.AstenTask.model.user.User;
 import jakarta.persistence.*;
 import lombok.*;

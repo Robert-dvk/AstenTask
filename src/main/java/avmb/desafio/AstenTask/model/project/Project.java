@@ -1,6 +1,7 @@
-package avmb.desafio.AstenTask.model;
+package avmb.desafio.AstenTask.model.project;
 
 import avmb.desafio.AstenTask.model.user.User;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -25,6 +26,7 @@ public class Project {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name="owner_id", nullable=false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private User owner;
 
     @Column(name="created_at", nullable=false)
@@ -32,6 +34,13 @@ public class Project {
 
     @Column(name="updated_at", nullable=false)
     private LocalDateTime updatedAt;
+
+    public Project(String name, String description, ProjectStatus status, User owner) {
+        this.name = name;
+        this.description = description;
+        this.status = status.name();
+        this.owner = owner;
+    }
 
     @PrePersist
     protected void onCreate() {

@@ -11,11 +11,14 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class TokenService {
-    @Value("${api.security.token.secret")
+    @Value("${api.security.token.secret}")
     private String secret;
+    
+    private final ConcurrentHashMap<String, Boolean> invalidlistedTokens = new ConcurrentHashMap<>();
     public String generateToken(User user) {
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
@@ -30,6 +33,9 @@ public class TokenService {
     }
     public String validateToken(String token) {
         try {
+            if (invalidlistedTokens.containsKey(token)) {
+                return "";
+            }
             Algorithm algorithm = Algorithm.HMAC256(secret);
             return JWT.require(algorithm)
                     .withIssuer("AstenTask")
@@ -39,6 +45,10 @@ public class TokenService {
         } catch (JWTVerificationException exception) {
             return "";
         }
+    }
+    
+    public void invalidateToken(String token) {
+        invalidlistedTokens.put(token, true);
     }
     private Instant generateTokenExpirationDate() {
         return LocalDateTime.now().plusHours(2).toInstant(ZoneOffset.of("-03:00"));

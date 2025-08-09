@@ -3,8 +3,8 @@ package avmb.desafio.AstenTask.controller;
 import avmb.desafio.AstenTask.infra.security.TokenService;
 import avmb.desafio.AstenTask.model.user.*;
 import avmb.desafio.AstenTask.repository.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -17,15 +17,18 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("auth")
 public class AuthenticationController {
-    @Autowired
-    private AuthenticationManager authenticationManager;
-    @Autowired
-    private UserRepository repository;
-    @Autowired
-    private TokenService tokenService;
+    private final AuthenticationManager authenticationManager;
+    private final UserRepository repository;
+    private final TokenService tokenService;
+
+    public AuthenticationController(AuthenticationManager authenticationManager, UserRepository repository, TokenService tokenService) {
+        this.authenticationManager = authenticationManager;
+        this.repository = repository;
+        this.tokenService = tokenService;
+    }
 
     @PostMapping("login")
-    public ResponseEntity login(@RequestBody @Valid AuthenticationDTO auth) {
+    public ResponseEntity<LoginResponseDTO> login(@RequestBody @Valid AuthenticationDTO auth) {
         var usernamePassword = new UsernamePasswordAuthenticationToken(auth.email(), auth.password());
         var authentication = this.authenticationManager.authenticate(usernamePassword);
         var token = tokenService.generateToken((User) authentication.getPrincipal());
@@ -33,7 +36,7 @@ public class AuthenticationController {
     }
 
     @PostMapping("register")
-    public ResponseEntity register(@RequestBody @Valid RegisterDTO register) {
+    public ResponseEntity<String> register(@RequestBody @Valid RegisterDTO register) {
         try {
             if (this.repository.findByEmail(register.email()) != null) {
                 return ResponseEntity.badRequest().body("Email already registered");
@@ -47,5 +50,21 @@ public class AuthenticationController {
             e.printStackTrace();
             return ResponseEntity.internalServerError().body("Error registering user: " + e.getMessage());
         }
+    }
+
+    @PostMapping("logout")
+    public ResponseEntity<String> logout(HttpServletRequest request) {
+        String token = recoverToken(request);
+        if (token != null) {
+            tokenService.invalidateToken(token);
+            return ResponseEntity.ok("Logout successful");
+        }
+        return ResponseEntity.badRequest().body("No token found");
+    }
+
+    private String recoverToken(HttpServletRequest request) {
+        var header = request.getHeader("Authorization");
+        if (header == null) return null;
+        return header.replace("Bearer ", "");
     }
 }

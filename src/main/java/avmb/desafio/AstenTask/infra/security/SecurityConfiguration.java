@@ -1,6 +1,5 @@
 package avmb.desafio.AstenTask.infra.security;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -19,12 +18,17 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfiguration {
-    @Autowired
-    private SecurityFilter securityFilter;
+    private final SecurityFilter securityFilter;
+
+    public SecurityConfiguration(SecurityFilter securityFilter) {
+        this.securityFilter = securityFilter;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         return httpSecurity
@@ -35,8 +39,12 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/register").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/logout").authenticated()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/projects/**").hasAnyRole("ADMIN", "PROJECT_MANAGER")
+                        .requestMatchers(HttpMethod.POST, "/projects/**").hasAnyRole("ADMIN", "PROJECT_MANAGER")
+                        .requestMatchers(HttpMethod.GET, "/projects/**").hasAnyRole("ADMIN", "PROJECT_MANAGER", "DEVELOPER", "VIEWER")
+                        .requestMatchers(HttpMethod.DELETE, "/projects/**").hasAnyRole("ADMIN", "PROJECT_MANAGER")
+                        .requestMatchers(HttpMethod.PUT, "/projects/**").hasAnyRole("ADMIN", "PROJECT_MANAGER")
                         .requestMatchers("/tasks/**").hasAnyRole("ADMIN", "PROJECT_MANAGER", "DEVELOPER")
                         .anyRequest().authenticated()
                 )
@@ -47,11 +55,10 @@ public class SecurityConfiguration {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+        configuration.setAllowedOriginPatterns(List.of("*"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
-        
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
