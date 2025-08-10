@@ -17,8 +17,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TokenService {
     @Value("${api.security.token.secret}")
     private String secret;
-    
-    private final ConcurrentHashMap<String, Boolean> invalidlistedTokens = new ConcurrentHashMap<>();
+
+    private final ConcurrentHashMap<String, Boolean> invalidListedTokens = new ConcurrentHashMap<>();
     public String generateToken(User user) {
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
@@ -33,7 +33,7 @@ public class TokenService {
     }
     public String validateToken(String token) {
         try {
-            if (invalidlistedTokens.containsKey(token)) {
+            if (invalidListedTokens.containsKey(token)) {
                 return "";
             }
             Algorithm algorithm = Algorithm.HMAC256(secret);
@@ -46,9 +46,9 @@ public class TokenService {
             return "";
         }
     }
-    
+
     public void invalidateToken(String token) {
-        invalidlistedTokens.put(token, true);
+        invalidListedTokens.put(token, true);
     }
     private Instant generateTokenExpirationDate() {
         return LocalDateTime.now().plusHours(2).toInstant(ZoneOffset.of("-03:00"));

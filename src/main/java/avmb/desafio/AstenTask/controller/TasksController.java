@@ -1,15 +1,13 @@
 package avmb.desafio.AstenTask.controller;
 
-import avmb.desafio.AstenTask.model.project.ProjectRequestDTO;
-import avmb.desafio.AstenTask.model.project.ProjectResponseDTO;
+import avmb.desafio.AstenTask.model.task.TaskAssigneeUpdateDTO;
 import avmb.desafio.AstenTask.model.task.TaskRequestDTO;
 import avmb.desafio.AstenTask.model.task.TaskResponseDTO;
+import avmb.desafio.AstenTask.model.task.TaskStatusUpdateDTO;
 import avmb.desafio.AstenTask.service.TaskService;
-import org.springframework.http.HttpStatus;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/tasks")
@@ -21,16 +19,25 @@ public class TasksController {
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getTaskById(@PathVariable Long id) {
-        Optional<TaskResponseDTO> task = taskService.getTaskById(id);
-        if (task.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Task with id " + id + " not found");
-        }
-        return ResponseEntity.ok(task.get());
+        TaskResponseDTO task = taskService.getTaskById(id);
+        return ResponseEntity.ok(task);
     }
     @PutMapping("/{id}")
     public ResponseEntity<TaskResponseDTO> updateTask(@PathVariable Long id, @RequestBody TaskRequestDTO dto) {
         TaskResponseDTO updated = taskService.updateTask(id, dto);
         return ResponseEntity.ok(updated);
+    }
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteTask(@PathVariable Long id) {
+        taskService.deleteTask(id);
+        return ResponseEntity.noContent().build();
+    }
+    @PutMapping("/{id}/status")
+    public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestBody @Valid TaskStatusUpdateDTO dto) {
+        return ResponseEntity.ok(taskService.updateTaskStatus(id, dto));
+    }
+    @PutMapping("/{id}/assign")
+    public ResponseEntity<?> assignTask(@PathVariable Long id, @RequestBody @Valid TaskAssigneeUpdateDTO dto) {
+        return ResponseEntity.ok(taskService.assignTask(id, dto));
     }
 }

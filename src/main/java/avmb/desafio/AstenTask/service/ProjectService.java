@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 @Service
 public class ProjectService {
@@ -37,15 +36,7 @@ public class ProjectService {
 
         Project savedProject = this.projectRepository.save(newProject);
 
-        return new ProjectResponseDTO(
-                savedProject.getId(),
-                savedProject.getName(),
-                savedProject.getDescription(),
-                savedProject.getStatus(),
-                savedProject.getOwner().getName(),
-                savedProject.getCreatedAt(),
-                savedProject.getUpdatedAt()
-        );
+        return getProjectResponseDTO(savedProject);
     }
     public Page<Project> listProjects(Pageable pageable) {
         return projectRepository.findAll(pageable);
@@ -53,14 +44,18 @@ public class ProjectService {
     public ProjectResponseDTO getProjectById(Long id) {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Project with id " + id + " not found"));
+        return getProjectResponseDTO(project);
+    }
+
+    private ProjectResponseDTO getProjectResponseDTO(Project project) {
         return new ProjectResponseDTO(
-                project.getId(),
-                project.getName(),
-                project.getDescription(),
-                project.getStatus(),
-                project.getOwner().getName(),
-                project.getCreatedAt(),
-                project.getUpdatedAt()
+            project.getId(),
+            project.getName(),
+            project.getDescription(),
+            project.getStatus(),
+            project.getOwner().getName(),
+            project.getCreatedAt(),
+            project.getUpdatedAt()
         );
     }
 
@@ -88,15 +83,7 @@ public class ProjectService {
 
         Project updatedProject = projectRepository.save(project);
 
-        return new ProjectResponseDTO(
-                updatedProject.getId(),
-                updatedProject.getName(),
-                updatedProject.getDescription(),
-                updatedProject.getStatus(),
-                updatedProject.getOwner().getName(),
-                updatedProject.getCreatedAt(),
-                updatedProject.getUpdatedAt()
-        );
+        return getProjectResponseDTO(updatedProject);
     }
     private void validateProjectInput(String name, String description) {
         if (name == null || name.isBlank()) {

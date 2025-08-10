@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 @Service
 public class TaskService {
@@ -36,139 +35,129 @@ public class TaskService {
 
         validateTaskInput(dto);
 
-        Optional<Project> project = projectRepository.findById(projectId);
-
-        if (project.isEmpty()) {
-            throw new ResourceNotFoundException("Project with id " + projectId + " not found");
-        }
+        Project project = findProjectByIdOrThrow(projectId);
 
         User assignee = dto.assigneeId() == null ? null : userRepository.findById(dto.assigneeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Assignee not found with id: " + dto.assigneeId()));
         
         Task newTask = new Task(
-            dto.title(), 
+            dto.title(),
             dto.description() != null ? dto.description() : "",
             dto.status(),
             dto.priority(),
-            project.get(), 
-            assignee, 
-            reporter, 
-            dto.estimatedHours(), 
-            dto.actualHours(), 
-            dto.dueDate(), 
+            project,
+            assignee,
+            reporter,
+            dto.estimatedHours(),
+            dto.actualHours(),
+            dto.dueDate(),
             LocalDateTime.now()
         );
 
         Task savedTask = this.taskRepository.save(newTask);
 
-        return new TaskResponseDTO(
-                savedTask.getId(),
-                savedTask.getTitle(),
-                savedTask.getDescription(),
-                savedTask.getPriority(),
-                savedTask.getStatus(),
-                project.get().getId(),
-                project.get().getName(),
-                savedTask.getAssignee() != null ? savedTask.getAssignee().getName() : null,
-                savedTask.getReporter().getName(),
-                savedTask.getEstimatedHours(),
-                savedTask.getActualHours(),
-                savedTask.getDueDate(),
-                savedTask.getCreatedAt(),
-                savedTask.getUpdatedAt()
+        return getTaskResponseDTO(savedTask);
+    }
+    public TaskResponseDTO getTaskById(Long id) {
+        Task task = findTaskByIdOrThrow(id);
+        return getTaskResponseDTO(task);
+    }
+
+    private TaskResponseDTO getTaskResponseDTO(Task task) {
+        return new TaskResponseDTO (
+            task.getId(),
+            task.getTitle(),
+            task.getDescription(),
+            task.getPriority(),
+            task.getStatus(),
+            task.getProject().getId(),
+            task.getProject().getName(),
+            task.getAssignee() != null ? task.getAssignee().getName() : null,
+            task.getReporter().getName(),
+            task.getEstimatedHours(),
+            task.getActualHours(),
+            task.getDueDate(),
+            task.getCreatedAt(),
+            task.getUpdatedAt()
         );
     }
-    public Optional<TaskResponseDTO> getTaskById(Long id) {
-        return taskRepository.findById(id)
-                .map(task -> new TaskResponseDTO(
-                        task.getId(),
-                        task.getTitle(),
-                        task.getDescription(),
-                        task.getPriority(),
-                        task.getStatus(),
-                        task.getProject().getId(),
-                        task.getProject().getName(),
-                        task.getAssignee() != null ? task.getAssignee().getName() : null,
-                        task.getReporter().getName(),
-                        task.getEstimatedHours(),
-                        task.getActualHours(),
-                        task.getDueDate(),
-                        task.getCreatedAt(),
-                        task.getUpdatedAt()
-                ));
-    }
-    public Page<TaskResponseDTO> getTaskByProject(Long projectId, Pageable pageable) {
-        if (!projectRepository.existsById(projectId)) {
-            throw new ResourceNotFoundException("Project not found with id: " + projectId);
-        }
 
+    public Page<TaskResponseDTO> getTaskByProject(Long projectId, Pageable pageable) {
+        findProjectByIdOrThrow(projectId);
         Page<Task> tasksPage = taskRepository.findByProjectId(projectId, pageable);
 
-        return tasksPage.map(task -> new TaskResponseDTO(
-                task.getId(),
-                task.getTitle(),
-                task.getDescription(),
-                task.getPriority(),
-                task.getStatus(),
-                task.getProject().getId(),
-                task.getProject().getName(),
-                task.getAssignee() != null ? task.getAssignee().getName() : null,
-                task.getReporter().getName(),
-                task.getEstimatedHours(),
-                task.getActualHours(),
-                task.getDueDate(),
-                task.getCreatedAt(),
-                task.getUpdatedAt()
-        ));
+        return tasksPage.map(this::getTaskResponseDTO);
     }
 
     @Transactional
-    public TaskResponseDTO updateTask(Long taskId, TaskRequestDTO dto) {
-        Task existingTask = taskRepository.findById(taskId)
-                .orElseThrow(() -> new ResourceNotFoundException("Task not found with id: " + taskId));
+    public TaskResponseDTO updateTask(Long id, TaskRequestDTO dto) {
+        Task task = findTaskByIdOrThrow(id);
         validateTaskInput(dto);
         if (dto.title() != null) {
-            existingTask.setTitle(dto.title());
+            task.setTitle(dto.title());
         }
 
         if (dto.description() != null) {
-            existingTask.setDescription(dto.description());
+            task.setDescription(dto.description());
         }
 
         if (dto.estimatedHours() != null) {
-            existingTask.setEstimatedHours(dto.estimatedHours());
+            task.setEstimatedHours(dto.estimatedHours());
         }
 
         if (dto.actualHours() != null) {
-            existingTask.setActualHours(dto.actualHours());
+            task.setActualHours(dto.actualHours());
         }
 
         if (dto.dueDate() != null) {
-            existingTask.setDueDate(dto.dueDate());
+            task.setDueDate(dto.dueDate());
         }
         if (dto.assigneeId() != null) {
-            User assignee = userRepository.findById(dto.assigneeId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Assignee not found with id: " + dto.assigneeId()));
-            existingTask.setAssignee(assignee);
+            User assignee = findUserByIdOrThrow(dto.assigneeId());
+            task.setAssignee(assignee);
         }
-        existingTask.setUpdatedAt(LocalDateTime.now());
-        Task updatedTask = taskRepository.save(existingTask);
-        return new TaskResponseDTO(
-                updatedTask.getId(),
-                updatedTask.getTitle(),
-                updatedTask.getDescription(),
-                updatedTask.getPriority(),
-                updatedTask.getStatus(),
-                updatedTask.getProject().getId(),
-                updatedTask.getProject().getName(),
-                updatedTask.getAssignee() != null ? updatedTask.getAssignee().getName() : null,
-                updatedTask.getReporter().getName(),
-                updatedTask.getEstimatedHours(),
-                updatedTask.getActualHours(),
-                updatedTask.getDueDate(),
-                updatedTask.getCreatedAt(),
-                updatedTask.getUpdatedAt()
-        );
+        task.setUpdatedAt(LocalDateTime.now());
+        Task updatedTask = taskRepository.save(task);
+        return getTaskResponseDTO(updatedTask);
+    }
+
+    @Transactional
+    public void deleteTask(Long id) {
+        Task task = findTaskByIdOrThrow(id);
+        taskRepository.delete(task);
+    }
+
+    @Transactional
+    public TaskResponseDTO updateTaskStatus(Long id, TaskStatusUpdateDTO dto) {
+        Task task = findTaskByIdOrThrow(id);
+        task.setStatus(String.valueOf(dto.status()));
+        Task updated = taskRepository.save(task);
+        return getTaskResponseDTO(updated);
+    }
+
+    @Transactional
+    public TaskResponseDTO assignTask(Long id, TaskAssigneeUpdateDTO dto) {
+        Task task = findTaskByIdOrThrow(id);
+        System.out.println(dto.assignee());
+        User assignee = findUserByIdOrThrow(dto.assignee());
+        task.setAssignee(assignee);
+        Task updated = taskRepository.save(task);
+        return getTaskResponseDTO(updated);
+    }
+
+    public Task findTaskByIdOrThrow(Long id) {
+        return taskRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Task not found with id: " + id));
+    }
+
+    public Project findProjectByIdOrThrow(Long id) {
+        return projectRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
+    }
+
+    public User findUserByIdOrThrow(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
     }
 
     private void validateTaskInput(TaskRequestDTO dto) {
