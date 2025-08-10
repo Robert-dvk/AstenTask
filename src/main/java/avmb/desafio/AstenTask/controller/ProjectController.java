@@ -1,15 +1,16 @@
 package avmb.desafio.AstenTask.controller;
 
-import avmb.desafio.AstenTask.model.project.CreateProjectDTO;
+import avmb.desafio.AstenTask.model.project.ProjectRequestDTO;
 import avmb.desafio.AstenTask.model.project.Project;
 import avmb.desafio.AstenTask.model.project.ProjectResponseDTO;
-import avmb.desafio.AstenTask.model.project.UpdateProjectDTO;
+import avmb.desafio.AstenTask.model.task.TaskRequestDTO;
+import avmb.desafio.AstenTask.model.task.TaskResponseDTO;
 import avmb.desafio.AstenTask.service.ProjectService;
+import avmb.desafio.AstenTask.service.TaskService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,14 +20,16 @@ import java.util.Optional;
 @RequestMapping("/projects")
 public class ProjectController {
     private final ProjectService projectService;
+    private final TaskService taskService;
 
-    public ProjectController(ProjectService projectService) {
+    public ProjectController(ProjectService projectService, TaskService taskService) {
         this.projectService = projectService;
+        this.taskService = taskService;
     }
 
     @PostMapping
-    public ResponseEntity<?> createProject(@RequestBody CreateProjectDTO dto) {
-        return ResponseEntity.ok(projectService.createProject(dto));
+    public ResponseEntity<?> createProject(@RequestBody ProjectRequestDTO dto) {
+        return ResponseEntity.status(201).body(projectService.createProject(dto));
     }
     @GetMapping
     public ResponseEntity<Page<Project>> listProjects() {
@@ -35,26 +38,29 @@ public class ProjectController {
         return ResponseEntity.ok(projects);
     }
     @GetMapping("/{id}")
-    public ResponseEntity<?> getProjectById(@PathVariable Long id) {
-        Optional<ProjectResponseDTO> project = projectService.getProjectById(id);
-        if (project.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Project with id " + id + " not found");
-        }
-        return ResponseEntity.ok(project.get());
+    public ResponseEntity<ProjectResponseDTO> getProjectById(@PathVariable Long id) {
+        ProjectResponseDTO project = projectService.getProjectById(id);
+        return ResponseEntity.ok(project);
     }
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteProjectById(@PathVariable Long id) {
         projectService.deleteProject(id);
-        return ResponseEntity.ok("Project successfully deleted!");
+        return ResponseEntity.ok("Project successfully deleted");
     }
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateProject(@PathVariable Long id, @RequestBody UpdateProjectDTO dto) {
-        Optional<ProjectResponseDTO> updated = projectService.updateProject(id, dto);
-        if (updated.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Project with id " + id + " not found");
-        }
-        return ResponseEntity.ok(updated.get());
+    public ResponseEntity<ProjectResponseDTO> updateProject(@PathVariable Long id, @RequestBody ProjectRequestDTO dto) {
+        ProjectResponseDTO updated = projectService.updateProject(id, dto);
+        return ResponseEntity.ok(updated);
+    }
+
+    @PostMapping("/{projectId}/tasks")
+    public ResponseEntity<TaskResponseDTO> createTask(@PathVariable Long projectId, @RequestBody TaskRequestDTO dto) {
+        TaskResponseDTO createdTask = taskService.createTask(projectId, dto);
+        return ResponseEntity.status(201).body(createdTask);
+    }
+    @GetMapping("/{projectId}/tasks")
+    public ResponseEntity<Page<TaskResponseDTO>> getTaskByProject(@PathVariable Long projectId, Pageable pageable) {
+        Page<TaskResponseDTO> tasks = taskService.getTaskByProject(projectId, pageable);
+        return ResponseEntity.ok(tasks);
     }
 }

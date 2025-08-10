@@ -1,7 +1,7 @@
-package avmb.desafio.AstenTask.model;
+package avmb.desafio.AstenTask.model.task;
 
-import avmb.desafio.AstenTask.model.project.Project;
 import avmb.desafio.AstenTask.model.user.User;
+import avmb.desafio.AstenTask.model.project.Project;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
@@ -25,6 +25,7 @@ public class Task {
     @Column(nullable=false)
     private String status;
 
+    @Column(nullable=false)
     private String priority;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -46,13 +47,28 @@ public class Task {
     private Integer actualHours;
 
     @Column(name="due_date")
-    private LocalDate dueDate;
+    private LocalDateTime dueDate;
 
     @Column(name="created_at", nullable=false)
     private LocalDateTime createdAt;
 
     @Column(name="updated_at", nullable=false)
     private LocalDateTime updatedAt;
+
+    public Task(String title, String description, TaskStatus status, TaskPriority priority, Project project, User assignee, User reporter, Integer estimatedHours, Integer actualHours, LocalDateTime dueDate, LocalDateTime createdAt) {
+        this.title = title;
+        this.description = description != null ? description : "";
+        this.status = status != null ? status.toString() : TaskStatus.OPEN.toString();
+        this.priority = priority != null ? priority.toString() : TaskPriority.MEDIUM.toString();
+        this.project = project;
+        this.assignee = assignee;
+        this.reporter = reporter;
+        this.estimatedHours = estimatedHours;
+        this.actualHours = actualHours;
+        this.dueDate = dueDate;
+        this.createdAt = createdAt;
+        this.updatedAt = createdAt;
+    }
 
     @PrePersist
     protected void onCreate() {

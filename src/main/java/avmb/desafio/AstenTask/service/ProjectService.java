@@ -1,9 +1,8 @@
 package avmb.desafio.AstenTask.service;
 
-import avmb.desafio.AstenTask.model.project.CreateProjectDTO;
-import avmb.desafio.AstenTask.model.project.Project;
-import avmb.desafio.AstenTask.model.project.ProjectResponseDTO;
-import avmb.desafio.AstenTask.model.project.UpdateProjectDTO;
+import avmb.desafio.AstenTask.exception.InvalidInsertException;
+import avmb.desafio.AstenTask.exception.ResourceNotFoundException;
+import avmb.desafio.AstenTask.model.project.*;
 import avmb.desafio.AstenTask.model.user.User;
 import avmb.desafio.AstenTask.repository.ProjectRepository;
 import avmb.desafio.AstenTask.repository.UserRepository;
@@ -12,7 +11,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
@@ -23,8 +24,10 @@ public class ProjectService {
         this.projectRepository = projectRepository;
         this.userRepository = userRepository;
     }
+    @Transactional
+    public ProjectResponseDTO createProject(ProjectRequestDTO dto) {
+        validateProjectInput(dto.name(), dto.description());
 
-    public ProjectResponseDTO createProject(CreateProjectDTO dto) {
         String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
         UserDetails userDetails = userRepository.findByEmail(userEmail);
 
@@ -47,40 +50,60 @@ public class ProjectService {
     public Page<Project> listProjects(Pageable pageable) {
         return projectRepository.findAll(pageable);
     }
-    public Optional<ProjectResponseDTO> getProjectById(Long id) {
-        return projectRepository.findById(id)
-                .map(project -> new ProjectResponseDTO(
-                        project.getId(),
-                        project.getName(),
-                        project.getDescription(),
-                        project.getStatus(),
-                        project.getOwner().getName(),
-                        project.getCreatedAt(),
-                        project.getUpdatedAt()
-                ));
+    public ProjectResponseDTO getProjectById(Long id) {
+        Project project = projectRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Project with id " + id + " not found"));
+        return new ProjectResponseDTO(
+                project.getId(),
+                project.getName(),
+                project.getDescription(),
+                project.getStatus(),
+                project.getOwner().getName(),
+                project.getCreatedAt(),
+                project.getUpdatedAt()
+        );
     }
+
+    @Transactional
     public void deleteProject(Long id) {
         projectRepository.deleteById(id);
     }
-    public Optional<ProjectResponseDTO> updateProject(Long id, UpdateProjectDTO dto) {
-        return projectRepository.findById(id).map(project -> {
-            if (dto.name() != null && !dto.name().isBlank()) {
-                project.setName(dto.name());
-            }
-            if (dto.description() != null) {
-                project.setDescription(dto.description());
-            }
-            if (dto.status() != null) {
-                project.setStatus(String.valueOf(dto.status()));
-            }
-            Project updatedProject = projectRepository.save(project);
-            return new ProjectResponseDTO( updatedProject.getId(),
-                    updatedProject.getName(),
-                    updatedProject.getDescription(),
-                    updatedProject.getStatus(),
-                    project.getOwner().getName(),
-                    project.getCreatedAt(),
-                    project.getUpdatedAt());
-        });
+    @Transactional
+    public ProjectResponseDTO updateProject(Long id, ProjectRequestDTO dto) {
+        Project project = projectRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Project with id " + id + " not found"));
+
+        if (dto.name() != null && !dto.name().isBlank()) {
+            project.setName(dto.name());
+        }
+        if (dto.description() != null) {
+            project.setDescription(dto.description());
+        }
+        if (dto.status() != null) {
+            project.setStatus(String.valueOf(dto.status()));
+        }
+        validateProjectInput(project.getName(), project.getDescription());
+
+        project.setUpdatedAt(LocalDateTime.now());
+
+        Project updatedProject = projectRepository.save(project);
+
+        return new ProjectResponseDTO(
+                updatedProject.getId(),
+                updatedProject.getName(),
+                updatedProject.getDescription(),
+                updatedProject.getStatus(),
+                updatedProject.getOwner().getName(),
+                updatedProject.getCreatedAt(),
+                updatedProject.getUpdatedAt()
+        );
+    }
+    private void validateProjectInput(String name, String description) {
+        if (name == null || name.isBlank()) {
+            throw new InvalidInsertException("Project name cannot be null or empty");
+        }
+        if (description == null || description.isBlank()) {
+            throw new InvalidInsertException("Project description cannot be null or empty");
+        }
     }
 }

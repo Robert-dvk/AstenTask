@@ -1,7 +1,7 @@
 package avmb.desafio.AstenTask.service;
 
+import avmb.desafio.AstenTask.exception.ResourceNotFoundException;
 import avmb.desafio.AstenTask.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -17,7 +17,7 @@ public class AuthorizationService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         UserDetails user = userRepository.findByEmail(username);
         if (user == null) {
-            throw new UsernameNotFoundException("User not found with email: " + username);
+            throw new ResourceNotFoundException("User not found with email: " + username);
         }
         return user;
     }
