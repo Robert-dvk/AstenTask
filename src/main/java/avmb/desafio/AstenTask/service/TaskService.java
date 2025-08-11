@@ -1,17 +1,18 @@
 package avmb.desafio.AstenTask.service;
 
+import avmb.desafio.AstenTask.exception.DeleteException;
 import avmb.desafio.AstenTask.exception.InvalidInsertException;
 import avmb.desafio.AstenTask.exception.ResourceNotFoundException;
 import avmb.desafio.AstenTask.model.project.Project;
 import avmb.desafio.AstenTask.model.task.*;
 import avmb.desafio.AstenTask.model.user.User;
+import avmb.desafio.AstenTask.repository.CommentRepository;
 import avmb.desafio.AstenTask.repository.ProjectRepository;
 import avmb.desafio.AstenTask.repository.TaskRepository;
 import avmb.desafio.AstenTask.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,39 +23,39 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
     private final ProjectRepository projectRepository;
-    public TaskService(TaskRepository taskRepository, ProjectRepository projectRepository, UserRepository userRepository) {
+    private final CommentRepository commentRepository;
+    public TaskService(TaskRepository taskRepository, ProjectRepository projectRepository, UserRepository userRepository, CommentRepository commentRepository) {
         this.taskRepository = taskRepository;
         this.userRepository = userRepository;
         this.projectRepository = projectRepository;
+        this.commentRepository = commentRepository;
     }
     @Transactional
     public TaskResponseDTO createTask(Long projectId, TaskRequestDTO dto) {
         String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-        UserDetails userDetails = userRepository.findByEmail(userEmail);
-        User reporter = (User) userDetails;
+        User reporter = (User) userRepository.findByEmail(userEmail);
 
         validateTaskInput(dto);
 
         Project project = findProjectByIdOrThrow(projectId);
 
-        User assignee = dto.assigneeId() == null ? null : userRepository.findById(dto.assigneeId())
-                .orElseThrow(() -> new ResourceNotFoundException("Assignee not found with id: " + dto.assigneeId()));
-        
-        Task newTask = new Task(
-            dto.title(),
-            dto.description() != null ? dto.description() : "",
-            dto.status(),
-            dto.priority(),
-            project,
-            assignee,
-            reporter,
-            dto.estimatedHours(),
-            dto.actualHours(),
-            dto.dueDate(),
-            LocalDateTime.now()
-        );
+        User user = findUserByIdOrThrow(dto.assigneeId());
 
-        Task savedTask = this.taskRepository.save(newTask);
+        User assignee = dto.assigneeId() == null ? null : user;
+        
+        Task savedTask = this.taskRepository.save(new Task(
+                dto.title(),
+                dto.description() != null ? dto.description() : "",
+                dto.status(),
+                dto.priority(),
+                project,
+                assignee,
+                reporter,
+                dto.estimatedHours(),
+                dto.actualHours(),
+                dto.dueDate(),
+                LocalDateTime.now()
+        ));
 
         return getTaskResponseDTO(savedTask);
     }
@@ -85,7 +86,6 @@ public class TaskService {
     public Page<TaskResponseDTO> getTaskByProject(Long projectId, Pageable pageable) {
         findProjectByIdOrThrow(projectId);
         Page<Task> tasksPage = taskRepository.findByProjectId(projectId, pageable);
-
         return tasksPage.map(this::getTaskResponseDTO);
     }
 
@@ -112,6 +112,12 @@ public class TaskService {
         if (dto.dueDate() != null) {
             task.setDueDate(dto.dueDate());
         }
+        if(dto.priority() != null) {
+            task.setPriority(String.valueOf(dto.priority()));
+        }
+        if(dto.status() != null) {
+            task.setStatus(String.valueOf(dto.status()));
+        }
         if (dto.assigneeId() != null) {
             User assignee = findUserByIdOrThrow(dto.assigneeId());
             task.setAssignee(assignee);
@@ -124,6 +130,10 @@ public class TaskService {
     @Transactional
     public void deleteTask(Long id) {
         Task task = findTaskByIdOrThrow(id);
+        boolean hasComment = commentRepository.existsByTaskId(id);
+        if (hasComment) {
+            throw new DeleteException("Cannot delete the task because there are associated comments.");
+        }
         taskRepository.delete(task);
     }
 

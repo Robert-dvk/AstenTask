@@ -1,10 +1,11 @@
-package avmb.desafio.AstenTask.model;
+package avmb.desafio.AstenTask.model.timeLog;
 
 import avmb.desafio.AstenTask.model.task.Task;
 import avmb.desafio.AstenTask.model.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "time_logs")
@@ -31,4 +32,11 @@ public class TimeLog {
 
     @Column(name="log_date", nullable=false)
     private LocalDate logDate;
+
+    public TimeLog(User author, Task task, Integer hoursWorked, String description) {
+        this.task = task;
+        this.user = author;
+        this.hoursWorked = hoursWorked;
+        this.description = description;
+    }
 }

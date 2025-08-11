@@ -1,4 +1,4 @@
-package avmb.desafio.AstenTask.model;
+package avmb.desafio.AstenTask.model.comment;
 
 import avmb.desafio.AstenTask.model.task.Task;
 import avmb.desafio.AstenTask.model.user.User;
@@ -28,6 +28,13 @@ public class Comment {
 
     @Column(name="created_at", nullable=false)
     private LocalDateTime createdAt;
+
+    public Comment(User author, Task task, String content) {
+        this.author = author;
+        this.task = task;
+        this.content = content;
+        this.createdAt = LocalDateTime.now();
+    }
 
     @PrePersist
     protected void onCreate() {

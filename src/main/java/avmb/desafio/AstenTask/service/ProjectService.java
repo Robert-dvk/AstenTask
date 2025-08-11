@@ -1,36 +1,39 @@
 package avmb.desafio.AstenTask.service;
 
+import avmb.desafio.AstenTask.exception.DeleteException;
 import avmb.desafio.AstenTask.exception.InvalidInsertException;
 import avmb.desafio.AstenTask.exception.ResourceNotFoundException;
 import avmb.desafio.AstenTask.model.project.*;
 import avmb.desafio.AstenTask.model.user.User;
 import avmb.desafio.AstenTask.repository.ProjectRepository;
+import avmb.desafio.AstenTask.repository.TaskRepository;
 import avmb.desafio.AstenTask.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 
 @Service
 public class ProjectService {
     private final ProjectRepository projectRepository;
+    private final TaskRepository taskRepository;
     private final UserRepository userRepository;
-    public ProjectService(ProjectRepository projectRepository, UserRepository userRepository) {
+    public ProjectService(ProjectRepository projectRepository, UserRepository userRepository, TaskRepository taskRepository) {
         this.projectRepository = projectRepository;
         this.userRepository = userRepository;
+        this.taskRepository = taskRepository;
     }
     @Transactional
     public ProjectResponseDTO createProject(ProjectRequestDTO dto) {
         validateProjectInput(dto.name(), dto.description());
 
         String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-        UserDetails userDetails = userRepository.findByEmail(userEmail);
-
-        User owner = (User) userDetails;
+        User owner = (User) userRepository.findByEmail(userEmail);
 
         Project newProject = new Project(dto.name(), dto.description(), dto.status(), owner);
 
@@ -42,8 +45,7 @@ public class ProjectService {
         return projectRepository.findAll(pageable);
     }
     public ProjectResponseDTO getProjectById(Long id) {
-        Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Project with id " + id + " not found"));
+        Project project = findProjectByIdOrThrow(id);
         return getProjectResponseDTO(project);
     }
 
@@ -61,12 +63,16 @@ public class ProjectService {
 
     @Transactional
     public void deleteProject(Long id) {
+        findProjectByIdOrThrow(id);
+        boolean hasTasks = taskRepository.existsByProjectId(id);
+        if (hasTasks) {
+            throw new DeleteException("Cannot delete the project because there are associated tasks.");
+        }
         projectRepository.deleteById(id);
     }
     @Transactional
     public ProjectResponseDTO updateProject(Long id, ProjectRequestDTO dto) {
-        Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Project with id " + id + " not found"));
+        Project project = findProjectByIdOrThrow(id);
 
         if (dto.name() != null && !dto.name().isBlank()) {
             project.setName(dto.name());
@@ -84,6 +90,10 @@ public class ProjectService {
         Project updatedProject = projectRepository.save(project);
 
         return getProjectResponseDTO(updatedProject);
+    }
+    public Project findProjectByIdOrThrow(Long id) {
+        return projectRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + id));
     }
     private void validateProjectInput(String name, String description) {
         if (name == null || name.isBlank()) {

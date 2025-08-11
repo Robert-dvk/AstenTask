@@ -28,4 +28,8 @@ public class GlobalExceptionHandler {
         }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid request body, status and priority can not be empty");
     }
+    @ExceptionHandler(DeleteException.class)
+    public ResponseEntity<String> handleDeleteException(DeleteException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ex.getMessage());
+    }
 }
