@@ -16,6 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Service
@@ -24,11 +25,13 @@ public class TaskService {
     private final UserRepository userRepository;
     private final ProjectRepository projectRepository;
     private final CommentRepository commentRepository;
-    public TaskService(TaskRepository taskRepository, ProjectRepository projectRepository, UserRepository userRepository, CommentRepository commentRepository) {
+    private final BrazilApiService brazilService;
+    public TaskService(TaskRepository taskRepository, ProjectRepository projectRepository, UserRepository userRepository, CommentRepository commentRepository, BrazilApiService brazilService) {
         this.taskRepository = taskRepository;
         this.userRepository = userRepository;
         this.projectRepository = projectRepository;
         this.commentRepository = commentRepository;
+        this.brazilService = brazilService;
     }
     @Transactional
     public TaskResponseDTO createTask(Long projectId, TaskRequestDTO dto) {
@@ -167,6 +170,9 @@ public class TaskService {
     }
 
     private void validateTaskInput(TaskRequestDTO dto) {
+        if (brazilService.isHoliday(LocalDate.from(dto.dueDate()))) {
+            throw new InvalidInsertException("The due date cannot be a holiday.");
+        }
         if (dto.title() == null || dto.title().isBlank()) {
             throw new InvalidInsertException("Task title cannot be null or empty");
         }
