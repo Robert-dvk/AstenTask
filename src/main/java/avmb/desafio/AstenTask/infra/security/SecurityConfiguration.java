@@ -24,9 +24,13 @@ import java.util.List;
 @EnableWebSecurity
 public class SecurityConfiguration {
     private final SecurityFilter securityFilter;
+    private final AuthEntryPointError authEntryPointError;
+    private final AccessDeniedError accessDeniedError;
 
-    public SecurityConfiguration(SecurityFilter securityFilter) {
+    public SecurityConfiguration(SecurityFilter securityFilter, AuthEntryPointError authEntryPointError, AccessDeniedError accessDeniedError) {
         this.securityFilter = securityFilter;
+        this.authEntryPointError = authEntryPointError;
+        this.accessDeniedError = accessDeniedError;
     }
 
     @Bean
@@ -54,6 +58,10 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.PUT, "/time-logs/**").hasAnyRole("ADMIN", "PROJECT_MANAGER", "DEVELOPER")
                         .requestMatchers(HttpMethod.GET, "/dashboard/**").hasAnyRole("ADMIN", "PROJECT_MANAGER", "DEVELOPER", "VIEWER")
                         .anyRequest().authenticated()
+                )
+                .exceptionHandling(ex -> ex
+                    .authenticationEntryPoint(authEntryPointError)
+                    .accessDeniedHandler(accessDeniedError)
                 )
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

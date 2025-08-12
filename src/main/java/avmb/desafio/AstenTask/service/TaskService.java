@@ -39,17 +39,13 @@ public class TaskService {
 
         Project project = findProjectByIdOrThrow(projectId);
 
-        User user = findUserByIdOrThrow(dto.assigneeId());
-
-        User assignee = dto.assigneeId() == null ? null : user;
-        
         Task savedTask = this.taskRepository.save(new Task(
                 dto.title(),
                 dto.description() != null ? dto.description() : "",
                 dto.status(),
                 dto.priority(),
                 project,
-                assignee,
+                null,
                 reporter,
                 dto.estimatedHours(),
                 dto.actualHours(),

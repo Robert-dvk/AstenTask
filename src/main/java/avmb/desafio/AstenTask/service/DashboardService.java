@@ -1,6 +1,5 @@
 package avmb.desafio.AstenTask.service;
 
-import avmb.desafio.AstenTask.exception.ResourceNotFoundException;
 import avmb.desafio.AstenTask.model.dashboard.DashboardOverviewResponseDTO;
 import avmb.desafio.AstenTask.model.task.Task;
 import avmb.desafio.AstenTask.model.task.TaskResponseDTO;
