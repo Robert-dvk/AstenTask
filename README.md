@@ -7,4 +7,4 @@ docker compose up -d
 
 Este projeto foi desenvolvido utilizando Java 24 e Spring 3.5.4
 
-Mais informações no arquivo documentacao.pdf
+Mais informações no arquivo [documentacao.pdf](https://github.com/Robert-dvk/AstenTask/blob/main/documentacao.pdf)
